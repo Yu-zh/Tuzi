@@ -2,8 +2,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-void moonbit_hello(void) { write(STDOUT_FILENO, "hello from c", 13); }
-
 struct termios orig_termios;
 
 void disable_raw_mode(void) {
@@ -22,5 +20,3 @@ void enable_raw_mode(void) {
   raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
-
-int read_key(char *c) { return read(STDIN_FILENO, c, 1); }

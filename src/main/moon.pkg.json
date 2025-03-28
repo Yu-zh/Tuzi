@@ -1,6 +1,6 @@
 {
   "is-main": true,
-  "import": ["tonyfettes/c"],
+  "import": [],
   "targets": {
     "main.mbt": ["native"]
   },
