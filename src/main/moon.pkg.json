@@ -1,0 +1,9 @@
+{
+  "is-main": true,
+  "import": ["tonyfettes/c"],
+  "targets": {
+    "main.mbt": ["native"]
+  },
+  "native-stub": ["c.c"],
+  "supported-targets": ["native"]
+}
