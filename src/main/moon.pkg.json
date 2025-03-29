@@ -1,6 +1,6 @@
 {
   "is-main": true,
-  "import": [],
+  "import": ["moonbitlang/x/fs", "moonbitlang/x/encoding", "Yu-zh/milo/cbytes"],
   "targets": {
     "main.mbt": ["native"]
   },

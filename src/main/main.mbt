@@ -28,7 +28,7 @@ const SHOW_CURSOR : Bytes = "\x1b[?25h"
 ///|
 fn cursor_pos(x : Int, y : Int) -> Bytes {
   fn bytes(a : Int) -> Bytes {
-    int_to_bytes(a)
+    @cbytes.int_to_bytes(a)
   }
 
   [..b"\x1b[", ..bytes(y), ';', ..bytes(x), 'H', 0]
@@ -40,6 +40,7 @@ struct Editor {
   cmax : Int
   mut cx : Int
   mut cy : Int
+  rows : Array[Bytes]
 } derive(Default)
 
 ///|
@@ -116,10 +117,16 @@ fn process_key(self : Editor) -> Unit {
 
 ///|
 fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
+  let rows_len = self.rows.length()
   for y in 0..<(self.rmax - 1) {
-    if y == self.rmax / 3 {
-      // welcome message
-      let welcome = [..b"Kilo editor -- version ", ..VERSION]
+    if y < rows_len {
+      buffer.write_bytes(self.rows[y])
+    } else if rows_len == 0 && y == self.rmax / 3 {
+      let welcome = [
+          // welcome message
+          ..b"Kilo editor -- version ",
+          ..VERSION,
+        ]
       let padding = (self.cmax - welcome.length()) / 2
       let padding = Bytes::make(padding, b' ')
       buffer.write_bytes([b'~', ..padding, ..welcome])
@@ -156,18 +163,33 @@ fn Editor::new() -> Editor {
   let cmax : FixedArray[Int] = [0]
   let r = get_window_size(rmax, cmax)
   guard r == 0 else { die("get_window_size") }
-  Editor::{ rmax: rmax[0], cmax: cmax[0], cx: 0, cy: 0 }
+  Editor::{ rmax: rmax[0], cmax: cmax[0], cx: 0, cy: 0, rows: [] }
+}
+
+///|
+fn read_file(self : Editor, filename : String) -> Unit {
+  let contents = try {
+    @fs.read_file_to_bytes!(filename)
+  } catch {
+    e => die(@encoding.encode(UTF8, e.to_string()))
+    //e => die(e.to_string().to_bytes())
+  }
+  for line in @cbytes.lines(contents) {
+    self.rows.push([..line])
+  }
 }
 
 ///|
 fn main {
   enable_raw_mode()
   let editor = Editor::new()
+  let args = @env.args()
+  if args.length() > 1 {
+    let filename = args[1]
+    editor.read_file(filename)
+  }
   while true {
     editor.refresh_screen()
     editor.process_key()
   }
 }
-
-///|
-fn _identity[A, B](x : A) -> B = "%identity"
