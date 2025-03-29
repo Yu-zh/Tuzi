@@ -1,40 +1,35 @@
 ///|
-// extern "c" fn hello() = "moonbit_hello"
-
-///|
-extern "c" fn enable_raw_mode() = "enable_raw_mode"
-
-///|
-extern "c" fn read(fd : Int, p : FixedArray[Byte], len : Int) -> Int = "read"
-
-///|
-extern "c" fn write(fd : Int, p : Bytes, len : Int) -> Int = "write"
-
-///|
-extern "c" fn perror(s : Bytes) = "perror"
-
-///|
-extern "c" fn exit(n : Int) = "exit"
-
-///|
 const STDIN_FILENO = 0
 
 ///|
 const STDOUT_FILENO = 1
 
 ///|
-fn die(s : Bytes) -> Unit {
-  // clear the screen
-  write_bytes("\x1b[2J")
-  // reset cursor to the top left
-  write_bytes("\x1b[H")
-  perror([..s, 0])
-  exit(1)
-}
+// 0: clear from cursor to end of screen/line (default)
+// 1: clear from cursor to beginning of screen/line
+// 2: clear entire screen/line
+const CLEAR_SCREEN : Bytes = "\x1b[2J"
 
 ///|
-fn read_key(p : FixedArray[Byte]) -> Int {
-  read(STDIN_FILENO, p, 1)
+const RESET_CURSOR : Bytes = "\x1b[H"
+
+///|
+const HIDE_CURSOR : Bytes = "\x1b[?25l"
+
+///|
+const SHOW_CURSOR : Bytes = "\x1b[?25h"
+
+///|
+struct Editor {
+  screen_rows : Int
+  screen_cols : Int
+} derive(Default)
+
+///|
+fn read_key(p : FixedArray[Byte]) -> Unit {
+  let r = read(STDIN_FILENO, p, 1)
+  guard r == 1 else { die("read_key") }
+
 }
 
 ///|
@@ -45,20 +40,44 @@ fn write_bytes(bs : Bytes) -> Unit {
 }
 
 ///|
-fn main {
-  enable_raw_mode()
-  // clear the screen
-  write_bytes("\x1b[2J")
+fn process_key() -> Unit {
   // cannot use `Bytes` but it is const
   let arr : FixedArray[Byte] = [0]
+  read_key(arr)
+  let c = Char::from_int(arr[0].to_int())
+  println("\{c.to_int()} (\{c})\r")
+  if c == 'q' {
+    exit(0)
+  }
+}
+
+///|
+fn refresh_screen() -> Unit {
+  let buffer = @buffer.new(size_hint=256)
+  buffer.write_bytes(HIDE_CURSOR)
+  buffer.write_bytes(RESET_CURSOR)
+  write_bytes(buffer.to_bytes())
+}
+
+///|
+fn Editor::new() -> Editor {
+  let rows : FixedArray[Int] = [0]
+  let cols : FixedArray[Int] = [0]
+  let r = get_window_size(rows, cols)
+  guard r == 0 else { die("get_window_size") }
+  println(rows[0])
+  println(cols[0])
+  Editor::{ screen_rows: rows[0], screen_cols: cols[0] }
+}
+
+///|
+fn main {
+  enable_raw_mode()
+  let editor = Editor::new()
+  ignore(editor)
   while true {
-    let r = read_key(arr)
-    guard r == 1 else { die("read_key") }
-    let c = Char::from_int(arr[0].to_int())
-    println("\{c.to_int()} (\{c})\r")
-    if c == 'q' {
-      break
-    }
+    refresh_screen()
+    process_key()
   }
 }
 

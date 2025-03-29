@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -19,4 +20,16 @@ void enable_raw_mode(void) {
   raw.c_cflag |= (CS8);
   raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+int get_window_size(int *rows, int *cols) {
+  struct winsize ws;
+
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0 ||
+      ws.ws_row == 0) {
+    return -1;
+  }
+  *cols = ws.ws_col;
+  *rows = ws.ws_row;
+  return 0;
 }
