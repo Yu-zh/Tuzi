@@ -26,6 +26,17 @@ const HIDE_CURSOR : Bytes = "\x1b[?25l"
 const SHOW_CURSOR : Bytes = "\x1b[?25h"
 
 ///|
+// 1: bold
+// 4: underline
+// 5: blink
+// 7: reverse
+// 0: reset
+const INVERT_COLOR : Bytes = "\x1b[7m"
+
+///|
+const RESET_COLOR : Bytes = "\x1b[m"
+
+///|
 fn cursor_pos(x : Int, y : Int) -> Bytes {
   fn bytes(a : Int) -> Bytes {
     @cbytes.int_to_bytes(a)
@@ -41,6 +52,7 @@ struct Editor {
   mut cx : Int
   mut cy : Int
   rows : Array[Bytes]
+  mut filename : Bytes
 } derive(Default)
 
 ///|
@@ -118,7 +130,7 @@ fn process_key(self : Editor) -> Unit {
 ///|
 fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
   let rows_len = self.rows.length()
-  for y in 0..<(self.rmax - 1) {
+  for y in 0..<(self.rmax - 2) {
     if y < rows_len {
       buffer.write_bytes(self.rows[y])
     } else if rows_len == 0 && y == self.rmax / 3 {
@@ -136,9 +148,28 @@ fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
     buffer.write_bytes(CLEAR_LINE0)
     buffer.write_bytes(b"\r\n")
   }
-  // todo status line
-  buffer.write_byte('~')
-  buffer.write_bytes(CLEAR_LINE0)
+}
+
+///|
+fn draw_status_bar(self : Editor, buffer : @buffer.T) -> Unit {
+  buffer.write_bytes(INVERT_COLOR)
+  let status_front = if self.filename.length() > 0 {
+    self.filename
+  } else {
+    b"(No file)"
+  }
+  let status_end = [
+      ..@cbytes.int_to_bytes(self.cy + 1),
+      b':',
+      ..@cbytes.int_to_bytes(self.cx + 1),
+    ]
+  let padding = Bytes::make(
+    self.cmax - status_front.length() - status_end.length(),
+    b' ',
+  )
+  let status : Bytes = [..status_front, ..padding, ..status_end, ..b"\r\n"]
+  buffer.write_bytes(status)
+  buffer.write_bytes(RESET_COLOR)
 }
 
 ///|
@@ -152,6 +183,7 @@ fn refresh_screen(self : Editor) -> Unit {
   buffer.write_bytes(HIDE_CURSOR)
   buffer.write_bytes(RESET_CURSOR)
   self.draw_rows(buffer)
+  self.draw_status_bar(buffer)
   self.draw_cursor(buffer)
   buffer.write_bytes(SHOW_CURSOR)
   output_bytes(buffer.to_bytes())
@@ -163,7 +195,7 @@ fn Editor::new() -> Editor {
   let cmax : FixedArray[Int] = [0]
   let r = get_window_size(rmax, cmax)
   guard r == 0 else { die("get_window_size") }
-  Editor::{ rmax: rmax[0], cmax: cmax[0], cx: 0, cy: 0, rows: [] }
+  Editor::{ rmax: rmax[0], cmax: cmax[0], cx: 0, cy: 0, rows: [], filename: [] }
 }
 
 ///|
@@ -177,6 +209,7 @@ fn read_file(self : Editor, filename : String) -> Unit {
   for line in @cbytes.lines(contents) {
     self.rows.push([..line])
   }
+  self.filename = @encoding.encode(UTF8, filename)
 }
 
 ///|
