@@ -9,8 +9,8 @@ fn die[T](s : Bytes) -> T {
 }
 
 ///|
-fn output_bytes(bs : Bytes) -> Unit {
-  let len = bs.length()
-  guard len == write(STDOUT_FILENO, bs, len) else { die("write") }
-
+fn quit() -> Unit {
+  output_bytes(CLEAR_SCREEN2)
+  output_bytes(RESET_CURSOR)
+  exit(0)
 }

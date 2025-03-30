@@ -47,13 +47,20 @@ fn cursor_pos(x : Int, y : Int) -> Bytes {
 
 ///|
 struct Editor {
+  // max number of rows on the screen
   rmax : Int
+  // max number of columns on the screen
   cmax : Int
+  // column number (0 indexed) pointing to the contents instead of the screen
   mut cx : Int
+  // row number (0 indexed) pointing to the contents instead of the screen
   mut cy : Int
+  // contents to be displayed
   rows : Array[Bytes]
   mut filename : Bytes
-} derive(Default)
+  // row offset
+  mut roff : Int
+}
 
 ///|
 enum Key {
@@ -66,55 +73,30 @@ enum Key {
 }
 
 ///|
-fn read_key() -> Key {
-  // cannot use `Bytes` because it is const
-  let p : FixedArray[Byte] = [0]
-  let mut r = 0
-  while r != 1 {
-    r = read(STDIN_FILENO, p, 1)
-    if r == -1 {
-      die("read")
-    }
-  }
-  match p[0] {
-    ESC => {
-      guard read(STDIN_FILENO, p, 1) == 1 && p[0] == '[' else {
-        return Normal(ESC)
-      }
-      guard read(STDIN_FILENO, p, 1) == 1 else { return Normal(ESC) }
-      match p[0] {
-        'A' => Up
-        'B' => Down
-        'C' => Right
-        'D' => Left
-        _ => Normal(ESC)
-      }
-    }
-    CTRL_Q => Quit
-    CTRL_B => Left
-    CTRL_F => Right
-    CTRL_N => Down
-    CTRL_P => Up
-    _ => Normal(p[0])
-  }
-}
-
-///|
 fn move_cursor(self : Editor, key : Key) -> Unit {
   match key {
     Left => if self.cx != 0 { self.cx -= 1 }
     Right => if self.cx != self.cmax { self.cx += 1 }
-    Up => if self.cy != 0 { self.cy -= 1 }
-    Down => if self.cy != self.rmax { self.cy += 1 }
+    Up =>
+      if self.cy > 0 {
+        self.cy -= 1
+        // update row offset
+        // invariant self.cy >= self.roff
+        if self.cy < self.roff {
+          self.roff -= 1
+        }
+      }
+    Down =>
+      if self.cy < self.rows.length() {
+        self.cy += 1
+        // update row offset
+        // invariant self.cy - self.roff < self.rmax - 2
+        if self.cy + self.roff >= self.rmax - 2 {
+          self.roff += 1
+        }
+      }
     _ => abort("impossible")
   }
-}
-
-///|
-fn quit() -> Unit {
-  output_bytes(CLEAR_SCREEN2)
-  output_bytes(RESET_CURSOR)
-  exit(0)
 }
 
 ///|
@@ -132,7 +114,7 @@ fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
   let rows_len = self.rows.length()
   for y in 0..<(self.rmax - 2) {
     if y < rows_len {
-      buffer.write_bytes(self.rows[y])
+      buffer.write_bytes(self.rows[y + self.roff])
     } else if rows_len == 0 && y == self.rmax / 3 {
       let welcome = [
           // welcome message
@@ -174,7 +156,7 @@ fn draw_status_bar(self : Editor, buffer : @buffer.T) -> Unit {
 
 ///|
 fn draw_cursor(self : Editor, buffer : @buffer.T) -> Unit {
-  buffer.write_bytes(cursor_pos(self.cx + 1, self.cy + 1))
+  buffer.write_bytes(cursor_pos(self.cx + 1, self.cy - self.roff + 1))
 }
 
 ///|
@@ -195,7 +177,15 @@ fn Editor::new() -> Editor {
   let cmax : FixedArray[Int] = [0]
   let r = get_window_size(rmax, cmax)
   guard r == 0 else { die("get_window_size") }
-  Editor::{ rmax: rmax[0], cmax: cmax[0], cx: 0, cy: 0, rows: [], filename: [] }
+  Editor::{
+    rmax: rmax[0],
+    cmax: cmax[0],
+    cx: 0,
+    cy: 0,
+    rows: [],
+    filename: [],
+    roff: 0,
+  }
 }
 
 ///|
