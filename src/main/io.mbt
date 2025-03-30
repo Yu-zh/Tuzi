@@ -19,22 +19,24 @@ fn read_key() -> Key {
   match p[0] {
     ESC => {
       guard read(STDIN_FILENO, p, 1) == 1 && p[0] == '[' else {
-        return Normal(ESC)
+        return Other(ESC)
       }
-      guard read(STDIN_FILENO, p, 1) == 1 else { return Normal(ESC) }
+      guard read(STDIN_FILENO, p, 1) == 1 else { return Other(ESC) }
       match p[0] {
         'A' => Up
         'B' => Down
         'C' => Right
         'D' => Left
-        _ => Normal(ESC)
+        _ => Other(ESC)
       }
     }
     CTRL_Q => Quit
     CTRL_B => Left
     CTRL_F => Right
     CTRL_N => Down
+    CTRL_E => End
+    CTRL_A => Head
     CTRL_P => Up
-    _ => Normal(p[0])
+    _ => Other(p[0])
   }
 }

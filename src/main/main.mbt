@@ -68,34 +68,93 @@ enum Key {
   Down
   Right
   Left
+  End
+  Head
   Quit
-  Normal(Byte)
+  Other(Byte)
 }
 
 ///|
 fn move_cursor(self : Editor, key : Key) -> Unit {
+  fn adjust_cx() {
+    if self.cy < self.rows.length() {
+      if self.cx > self.rows[self.cy].length() {
+        self.cx = self.rows[self.cy].length()
+      }
+    } else if self.cy == self.rows.length() {
+      self.cx = 0
+    } else {
+      die("adjust_cx")
+    }
+  }
+
+  fn move_up() -> Bool {
+    guard self.cy > 0 else { return false }
+    self.cy -= 1
+    // update row offset
+    // invariant self.cy >= self.roff
+    if self.cy < self.roff {
+      self.roff -= 1
+    }
+    true
+  }
+
+  fn move_down() -> Bool {
+    guard self.cy < self.rows.length() else { return false }
+    self.cy += 1
+    // update row offset
+    // invariant self.cy - self.roff < self.rmax - 2
+    if self.cy + self.roff >= self.rmax - 2 {
+      self.roff += 1
+    }
+    true
+  }
+
+  fn move_to_head() {
+    self.cx = 0
+  }
+
+  fn move_to_end() {
+    if self.cy < self.rows.length() {
+      self.cx = self.rows[self.cy].length()
+    }
+  }
+
+  fn move_right() {
+    guard self.cy < self.rows.length() else { return }
+    if self.cx < self.rows[self.cy].length() {
+      // cx can be equal to the self.rows[self.cy].length()
+      // it will point to the position after the last character
+      self.cx += 1
+    } else if self.cx == self.rows[self.cy].length() {
+      if move_down() {
+        move_to_head()
+      }
+    } else {
+      die("move_right")
+    }
+  }
+
+  fn move_left() {
+    if self.cx > 0 {
+      self.cx -= 1
+    } else if self.cx == 0 {
+      if move_up() {
+        move_to_end()
+      }
+    } else {
+      die("move_left")
+    }
+  }
+
   match key {
-    Left => if self.cx != 0 { self.cx -= 1 }
-    Right => if self.cx != self.cmax { self.cx += 1 }
-    Up =>
-      if self.cy > 0 {
-        self.cy -= 1
-        // update row offset
-        // invariant self.cy >= self.roff
-        if self.cy < self.roff {
-          self.roff -= 1
-        }
-      }
-    Down =>
-      if self.cy < self.rows.length() {
-        self.cy += 1
-        // update row offset
-        // invariant self.cy - self.roff < self.rmax - 2
-        if self.cy + self.roff >= self.rmax - 2 {
-          self.roff += 1
-        }
-      }
-    _ => abort("impossible")
+    Left => move_left()
+    Right => move_right()
+    Up => if move_up() { adjust_cx() }
+    Down => if move_down() { adjust_cx() }
+    Head => move_to_head()
+    End => move_to_end()
+    _ => die("move_cursor")
   }
 }
 
@@ -103,9 +162,9 @@ fn move_cursor(self : Editor, key : Key) -> Unit {
 fn process_key(self : Editor) -> Unit {
   let k = read_key()
   match k {
-    Left | Right | Up | Down => self.move_cursor(k)
+    Left | Right | Up | Down | End | Head => self.move_cursor(k)
     Quit => quit()
-    Normal(_) => ()
+    Other(_) => ()
   }
 }
 
