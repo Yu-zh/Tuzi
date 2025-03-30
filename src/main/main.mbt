@@ -71,7 +71,10 @@ enum Key {
   End
   Head
   Quit
-  Other(Byte)
+  Insert(Byte)
+  Backspace
+  Newline
+  Esc
 }
 
 ///|
@@ -159,12 +162,67 @@ fn move_cursor(self : Editor, key : Key) -> Unit {
 }
 
 ///|
+fn insert_char(self : Editor, c : Byte) -> Unit {
+  if self.cy == self.rows.length() {
+    self.rows.push([])
+  }
+  let row = self.rows[self.cy]
+  self.rows[self.cy] = [..row[:self.cx], c, ..row[self.cx:]]
+  self.cx += 1
+}
+
+///|
+fn move_cursor_to(self : Editor, x : Int, y : Int) -> Unit {
+  self.cy = y
+  self.cx = x
+}
+
+///|
+fn delete_char(self : Editor) -> Unit {
+  if self.cx == 0 {
+    if self.cy == 0 {
+      return
+    }
+    let cy = self.cy - 1
+    let cx = self.rows[cy].length()
+    if self.cy == self.rows.length() {
+      // last row does not need to be removed
+    } else {
+      let row = self.rows.remove(self.cy)
+      self.rows[cy] = [..self.rows[cy], ..row]
+    }
+    self.move_cursor_to(cx, cy)
+  } else {
+    let row = self.rows[self.cy]
+    self.rows[self.cy] = [..row[:self.cx - 1], ..row[self.cx:]]
+    self.move_cursor(Left)
+  }
+}
+
+///|
+fn newline(self : Editor) -> Unit {
+  if self.cy == self.rows.length() {
+    self.rows.push([])
+  } else {
+    let row = self.rows[self.cy]
+    let left = row[:self.cx]
+    let right = row[self.cx:]
+    self.rows[self.cy] = [..left]
+    self.rows.insert(self.cy + 1, [..right])
+  }
+  self.move_cursor_to(0, self.cy + 1)
+}
+
+///|
 fn process_key(self : Editor) -> Unit {
   let k = read_key()
   match k {
     Left | Right | Up | Down | End | Head => self.move_cursor(k)
     Quit => quit()
-    Other(_) => ()
+    Backspace => self.delete_char()
+    Newline => self.newline()
+    Insert(b) => self.insert_char(b)
+    Esc => ()
   }
 }
 
@@ -245,20 +303,6 @@ fn Editor::new() -> Editor {
     filename: [],
     roff: 0,
   }
-}
-
-///|
-fn read_file(self : Editor, filename : String) -> Unit {
-  let contents = try {
-    @fs.read_file_to_bytes!(filename)
-  } catch {
-    e => die(@encoding.encode(UTF8, e.to_string()))
-    //e => die(e.to_string().to_bytes())
-  }
-  for line in @cbytes.lines(contents) {
-    self.rows.push([..line])
-  }
-  self.filename = @encoding.encode(UTF8, filename)
 }
 
 ///|

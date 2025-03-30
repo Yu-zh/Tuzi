@@ -18,16 +18,14 @@ fn read_key() -> Key {
   }
   match p[0] {
     ESC => {
-      guard read(STDIN_FILENO, p, 1) == 1 && p[0] == '[' else {
-        return Other(ESC)
-      }
-      guard read(STDIN_FILENO, p, 1) == 1 else { return Other(ESC) }
+      guard read(STDIN_FILENO, p, 1) == 1 && p[0] == '[' else { return Esc }
+      guard read(STDIN_FILENO, p, 1) == 1 else { return Esc }
       match p[0] {
         'A' => Up
         'B' => Down
         'C' => Right
         'D' => Left
-        _ => Other(ESC)
+        _ => Esc
       }
     }
     CTRL_Q => Quit
@@ -37,6 +35,22 @@ fn read_key() -> Key {
     CTRL_E => End
     CTRL_A => Head
     CTRL_P => Up
-    _ => Other(p[0])
+    BACKSPACE => Backspace
+    NEWLINE => Newline
+    _ => Insert(p[0])
   }
+}
+
+///|
+fn read_file(self : Editor, filename : String) -> Unit {
+  let contents = try {
+    @fs.read_file_to_bytes!(filename)
+  } catch {
+    e => die(@encoding.encode(UTF8, e.to_string()))
+    //e => die(e.to_string().to_bytes())
+  }
+  for line in @cbytes.lines(contents) {
+    self.rows.push([..line])
+  }
+  self.filename = @encoding.encode(UTF8, filename)
 }

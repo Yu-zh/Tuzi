@@ -22,3 +22,9 @@ const CTRL_E : Byte = 5
 
 ///|
 const CTRL_P : Byte = 16
+
+///|
+const BACKSPACE : Byte = 127
+
+///|
+const NEWLINE : Byte = '\r'
