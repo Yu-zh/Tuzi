@@ -1,6 +1,12 @@
 {
   "is-main": true,
-  "import": ["moonbitlang/x/fs", "moonbitlang/x/encoding", "Yu-zh/milo/cbytes"],
+  "import": [
+    "moonbitlang/x/fs",
+    "moonbitlang/x/encoding",
+    "Yu-zh/tuzi/cbytes",
+    "tonyfettes/tree_sitter",
+    "tonyfettes/tree_sitter_moonbit"
+  ],
   "targets": {
     "main.mbt": ["native"]
   },

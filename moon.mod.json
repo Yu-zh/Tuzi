@@ -1,13 +1,17 @@
 {
-  "name": "Yu-zh/milo",
+  "name": "Yu-zh/tuzi",
   "version": "0.0.1",
   "deps": {
-    "moonbitlang/x": "0.4.23"
+    "moonbitlang/x": "0.4.23",
+    "tonyfettes/tree_sitter": "0.1.15",
+    "tonyfettes/tree_sitter_moonbit": "0.1.8"
   },
   "readme": "README.md",
   "repository": "",
   "license": "Apache-2.0",
-  "keywords": [],
+  "keywords": [
+    "editor"
+  ],
   "description": "",
   "source": "src"
 }
