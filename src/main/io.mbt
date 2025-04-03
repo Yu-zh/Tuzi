@@ -35,6 +35,7 @@ fn read_key() -> Key {
     CTRL_E => End
     CTRL_A => Head
     CTRL_P => Up
+    CTRL_S => Save
     BACKSPACE => Backspace
     NEWLINE => Newline
     _ => Insert(p[0])
@@ -53,4 +54,18 @@ fn read_file(self : Editor, filename : String) -> Unit {
     self.rows.push([..line])
   }
   self.filename = @encoding.encode(UTF8, filename)
+}
+
+///|
+fn save_file(self : Editor) -> Unit {
+  guard not(self.filename is []) else { return }
+  let contents = @cbytes.concat(self.rows, sep=b"\n")
+  let decoder = @encoding.decoder(UTF8)
+  let filename = decoder.decode_lossy(self.filename)
+  try {
+    @fs.write_bytes_to_file!(filename, contents)
+  } catch {
+    e => die(@encoding.encode(UTF8, e.to_string()))
+  }
+  self.dirty = false
 }

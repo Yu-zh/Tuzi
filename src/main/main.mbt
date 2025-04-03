@@ -2,41 +2,6 @@
 const VERSION : Bytes = b"0.0.1"
 
 ///|
-const STDIN_FILENO = 0
-
-///|
-const STDOUT_FILENO = 1
-
-///|
-// 0: clear from cursor to end of screen/line (default)
-// 1: clear from cursor to beginning of screen/line
-// 2: clear entire screen/line
-const CLEAR_SCREEN2 : Bytes = "\x1b[2J"
-
-///|
-const CLEAR_LINE0 : Bytes = "\x1b[K"
-
-///|
-const RESET_CURSOR : Bytes = "\x1b[H"
-
-///|
-const HIDE_CURSOR : Bytes = "\x1b[?25l"
-
-///|
-const SHOW_CURSOR : Bytes = "\x1b[?25h"
-
-///|
-// 1: bold
-// 4: underline
-// 5: blink
-// 7: reverse
-// 0: reset
-const INVERT_COLOR : Bytes = "\x1b[7m"
-
-///|
-const RESET_COLOR : Bytes = "\x1b[m"
-
-///|
 fn cursor_pos(x : Int, y : Int) -> Bytes {
   fn bytes(a : Int) -> Bytes {
     @cbytes.int_to_bytes(a)
@@ -60,6 +25,8 @@ struct Editor {
   mut filename : Bytes
   // row offset
   mut roff : Int
+  // dirty
+  mut dirty : Bool
 }
 
 ///|
@@ -75,6 +42,7 @@ enum Key {
   Backspace
   Newline
   Esc
+  Save
 }
 
 ///|
@@ -214,14 +182,25 @@ fn newline(self : Editor) -> Unit {
 }
 
 ///|
+fn edit(self : Editor, k : Key) -> Unit {
+  match k {
+    Backspace => self.delete_char()
+    Newline => self.newline()
+    Insert(b) => self.insert_char(b)
+    Save => self.save_file()
+    _ => ()
+  }
+  self.dirty = true
+}
+
+///|
 fn process_key(self : Editor) -> Unit {
   let k = read_key()
   match k {
     Left | Right | Up | Down | End | Head => self.move_cursor(k)
     Quit => quit()
-    Backspace => self.delete_char()
-    Newline => self.newline()
-    Insert(b) => self.insert_char(b)
+    Backspace | Newline | Insert(_) => self.edit(k)
+    Save => self.save_file()
     Esc => ()
   }
 }
@@ -252,10 +231,15 @@ fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
 ///|
 fn draw_status_bar(self : Editor, buffer : @buffer.T) -> Unit {
   buffer.write_bytes(INVERT_COLOR)
-  let status_front = if self.filename.length() > 0 {
+  let file_status = if self.filename.length() > 0 {
     self.filename
   } else {
-    b"(No file)"
+    b"[Scratch]"
+  }
+  let status_front : Bytes = if self.dirty {
+    [..file_status, b'*']
+  } else {
+    file_status
   }
   let status_end = [
       ..@cbytes.int_to_bytes(self.cy + 1),
@@ -302,6 +286,7 @@ fn Editor::new() -> Editor {
     rows: [],
     filename: [],
     roff: 0,
+    dirty: false,
   }
 }
 

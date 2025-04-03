@@ -24,6 +24,9 @@ const CTRL_E : Byte = 5
 const CTRL_P : Byte = 16
 
 ///|
+const CTRL_S : Byte = 19
+
+///|
 const BACKSPACE : Byte = 127
 
 ///|

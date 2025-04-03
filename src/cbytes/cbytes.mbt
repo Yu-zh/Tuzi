@@ -35,3 +35,18 @@ pub fn lines(s : Bytes) -> Iter[@bytes.View] {
     }
   })
 }
+
+///|
+pub fn concat(s : Array[Bytes], sep~ : Bytes = []) -> Bytes {
+  if s.length() == 0 {
+    return []
+  }
+  let buf = @buffer.new()
+  buf.write_bytes(s[0])
+  for i in 1..<s.length() {
+    buf.write_bytes(sep)
+    buf.write_bytes(s[i])
+  } else {
+    buf.contents()
+  }
+}

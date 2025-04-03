@@ -15,3 +15,8 @@ test "lines" {
   assert_eq!(lines(b"").collect(), [])
   assert_eq!(lines(b"\n").collect(), [b""[:]])
 }
+
+///|
+test "concat" {
+  assert_eq!(concat([b"hello", b"world"], sep=b"\n"), b"hello\nworld")
+}
