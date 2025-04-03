@@ -1,5 +1,5 @@
 {
-  "name": "Yu-zh/tuzi",
+  "name": "Yu-zh/Tuzi",
   "version": "0.0.1",
   "deps": {
     "moonbitlang/x": "0.4.23",
@@ -9,9 +9,7 @@
   "readme": "README.md",
   "repository": "",
   "license": "Apache-2.0",
-  "keywords": [
-    "editor"
-  ],
+  "keywords": ["text editor"],
   "description": "",
   "source": "src"
 }
