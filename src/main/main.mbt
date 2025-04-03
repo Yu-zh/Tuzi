@@ -75,7 +75,7 @@ fn move_cursor(self : Editor, key : Key) -> Unit {
     self.cy += 1
     // update row offset
     // invariant self.cy - self.roff < self.rmax - 2
-    if self.cy + self.roff >= self.rmax - 2 {
+    if self.cy - self.roff >= self.rmax - 2 {
       self.roff += 1
     }
     true
@@ -209,7 +209,7 @@ fn process_key(self : Editor) -> Unit {
 fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
   let rows_len = self.rows.length()
   for y in 0..<(self.rmax - 2) {
-    if y < rows_len {
+    if y + self.roff < rows_len {
       buffer.write_bytes(self.rows[y + self.roff])
     } else if rows_len == 0 && y == self.rmax / 3 {
       let welcome = [
