@@ -32,3 +32,32 @@ const INVERT_COLOR : Bytes = "\x1b[7m"
 
 ///|
 const RESET_COLOR : Bytes = "\x1b[m"
+
+///|
+enum Color {
+  Black = 30
+  Red = 31
+  Green = 32
+  Yellow = 33
+  Blue = 34
+  Magenta = 35
+  Cyan = 36
+  LightGray = 37
+  DarkGray = 90
+  LightRed = 91
+  LightGreen = 92
+  LightYellow = 93
+  LightBlue = 94
+  LightMagenta = 95
+  LightCyan = 96
+  White = 97
+  Default = 39
+}
+
+///|
+fn color_to_bytes(color : Color) -> Bytes {
+  [..b"\x1b[", ..color.to_int().to_string().to_bytes(), b'm']
+}
+
+///|
+fn to_int(self : Color) -> Int = "%identity"

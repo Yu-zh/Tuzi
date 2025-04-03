@@ -27,6 +27,8 @@ struct Editor {
   mut roff : Int
   // dirty
   mut dirty : Bool
+  // highlight
+  highlight : Highlight
 }
 
 ///|
@@ -210,7 +212,15 @@ fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
   let rows_len = self.rows.length()
   for y in 0..<(self.rmax - 2) {
     if y + self.roff < rows_len {
-      buffer.write_bytes(self.rows[y + self.roff])
+      let r = y + self.roff
+      for i in 0..<self.rows[r].length() {
+        if self.highlight._[r] is Some(t) {
+          if t[i] is Some(color) {
+            buffer.write_bytes(color_to_bytes(color))
+          }
+        }
+        buffer.write_byte(self.rows[r][i])
+      }
     } else if rows_len == 0 && y == self.rmax / 3 {
       let welcome = [
           // welcome message
@@ -265,6 +275,7 @@ fn refresh_screen(self : Editor) -> Unit {
   let buffer = @buffer.new(size_hint=256)
   buffer.write_bytes(HIDE_CURSOR)
   buffer.write_bytes(RESET_CURSOR)
+  self.highlight()
   self.draw_rows(buffer)
   self.draw_status_bar(buffer)
   self.draw_cursor(buffer)
@@ -287,6 +298,7 @@ fn Editor::new() -> Editor {
     filename: [],
     roff: 0,
     dirty: false,
+    highlight: Map::new(),
   }
 }
 
