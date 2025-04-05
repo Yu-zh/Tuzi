@@ -1,5 +1,5 @@
 ///|
-type Highlight Map[Int, Map[Int, Color]]
+type Highlight Map[Int, Map[Int, @termbit.Color]]
 
 ///|
 let moonbit_parser : @tree_sitter.Parser = @tree_sitter.Parser::new()..set_language(
@@ -13,7 +13,7 @@ let moonbit : @tree_sitter.Language = @tree_sitter_moonbit.language()
 fn highlight_mbt(self : Editor) -> Unit {
   // todo: we could do incremental highlighting
   self.highlight._.clear()
-  fn add_color(node : @tree_sitter.Node, color : Color) -> Unit {
+  fn add_color(node : @tree_sitter.Node, color : @termbit.Color) -> Unit {
     let start_row = node.start_point().row()
     let start_col = node.start_point().column()
     let end_row = node.end_point().row()
@@ -24,9 +24,12 @@ fn highlight_mbt(self : Editor) -> Unit {
       self.highlight._[start_row] = Map::new()..set(start_col, color)
     }
     if self.highlight._[end_row] is Some(t) {
-      t.set(end_col, Color::Default)
+      t.set(end_col, @termbit.Color::Default)
     } else {
-      self.highlight._[end_row] = Map::new()..set(end_col, Color::Default)
+      self.highlight._[end_row] = Map::new()..set(
+        end_col,
+        @termbit.Color::Default,
+      )
     }
   }
 
@@ -40,8 +43,8 @@ fn highlight_mbt(self : Editor) -> Unit {
   while cursor.next_capture() is Some(c) {
     let node = c.node
     match node.type_() {
-      "fn" | "let" => add_color(node, Color::Blue)
-      "string_literal" => add_color(node, Color::Green)
+      "fn" | "let" => add_color(node, @termbit.Color::Blue)
+      "string_literal" => add_color(node, @termbit.Color::Green)
       _ => ()
     }
   }

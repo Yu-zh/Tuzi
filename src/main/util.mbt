@@ -1,7 +1,7 @@
 ///|
 fn die[T](s : Bytes) -> T {
-  output_bytes(CLEAR_SCREEN2)
-  output_bytes(RESET_CURSOR)
+  @termbit.execute(@termbit.Terminal::Clear(All))
+  @termbit.execute(@termbit.Cursor::MoveTo(0, 0))
   perror([..s, 0])
   exit(1)
   // should be unreachable
@@ -10,7 +10,7 @@ fn die[T](s : Bytes) -> T {
 
 ///|
 fn quit() -> Unit {
-  output_bytes(CLEAR_SCREEN2)
-  output_bytes(RESET_CURSOR)
+  @termbit.execute(@termbit.Terminal::Clear(All))
+  @termbit.execute(@termbit.Cursor::MoveTo(0, 0))
   exit(0)
 }

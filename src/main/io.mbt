@@ -1,9 +1,5 @@
 ///|
-fn output_bytes(bs : Bytes) -> Unit {
-  let len = bs.length()
-  guard len == write(STDOUT_FILENO, bs, len) else { die("write") }
-
-}
+const STDIN_FILENO = 0
 
 ///|
 fn read_key() -> Key {

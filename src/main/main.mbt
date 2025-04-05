@@ -2,15 +2,6 @@
 const VERSION : Bytes = b"0.0.1"
 
 ///|
-fn cursor_pos(x : Int, y : Int) -> Bytes {
-  fn bytes(a : Int) -> Bytes {
-    @cbytes.int_to_bytes(a)
-  }
-
-  [..b"\x1b[", ..bytes(y), ';', ..bytes(x), 'H', 0]
-}
-
-///|
 struct Editor {
   // max number of rows on the screen
   rmax : Int
@@ -29,6 +20,8 @@ struct Editor {
   mut dirty : Bool
   // highlight
   highlight : Highlight
+  // terminal executor
+  terminal : @termbit.Executor
 }
 
 ///|
@@ -208,7 +201,7 @@ fn process_key(self : Editor) -> Unit {
 }
 
 ///|
-fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
+fn draw_rows(self : Editor) -> Unit {
   let rows_len = self.rows.length()
   for y in 0..<(self.rmax - 2) {
     if y + self.roff < rows_len {
@@ -216,31 +209,31 @@ fn draw_rows(self : Editor, buffer : @buffer.T) -> Unit {
       for i in 0..<self.rows[r].length() {
         if self.highlight._[r] is Some(t) {
           if t[i] is Some(color) {
-            buffer.write_bytes(color_to_bytes(color))
+            self.terminal.queue(@termbit.SetForegroundColor(color))
           }
         }
-        buffer.write_byte(self.rows[r][i])
+        self.terminal.queue(@termbit.Print::Bytes([self.rows[r][i]]))
       }
     } else if rows_len == 0 && y == self.rmax / 3 {
       let welcome = [
           // welcome message
-          ..b"Kilo editor -- version ",
+          ..b"Tuzi editor -- version ",
           ..VERSION,
         ]
       let padding = (self.cmax - welcome.length()) / 2
       let padding = Bytes::make(padding, b' ')
-      buffer.write_bytes([b'~', ..padding, ..welcome])
+      self.terminal.queue(@termbit.Print::Bytes([b'~', ..padding, ..welcome]))
     } else {
-      buffer.write_byte('~')
+      self.terminal.queue(@termbit.Print::Bytes([b'~']))
     }
-    buffer.write_bytes(CLEAR_LINE0)
-    buffer.write_bytes(b"\r\n")
+    self.terminal.queue(@termbit.Terminal::Clear(UntilNewLine))
+    self.terminal.queue(@termbit.Print::Bytes(b"\r\n"))
   }
 }
 
 ///|
-fn draw_status_bar(self : Editor, buffer : @buffer.T) -> Unit {
-  buffer.write_bytes(INVERT_COLOR)
+fn draw_status_bar(self : Editor) -> Unit {
+  self.terminal.queue(@termbit.SetAttribute(Reverse))
   let file_status = if self.filename.length() > 0 {
     self.filename
   } else {
@@ -261,26 +254,27 @@ fn draw_status_bar(self : Editor, buffer : @buffer.T) -> Unit {
     b' ',
   )
   let status : Bytes = [..status_front, ..padding, ..status_end, ..b"\r\n"]
-  buffer.write_bytes(status)
-  buffer.write_bytes(RESET_COLOR)
-}
-
-///|
-fn draw_cursor(self : Editor, buffer : @buffer.T) -> Unit {
-  buffer.write_bytes(cursor_pos(self.cx + 1, self.cy - self.roff + 1))
+  self.terminal.queue(@termbit.Print::Bytes(status))
+  self.terminal.queue(@termbit.SetAttribute(Reset))
 }
 
 ///|
 fn refresh_screen(self : Editor) -> Unit {
-  let buffer = @buffer.new(size_hint=256)
-  buffer.write_bytes(HIDE_CURSOR)
-  buffer.write_bytes(RESET_CURSOR)
+  self.terminal.queue(@termbit.Hide)
+  // reset cursor to the top left
+  self.terminal.queue(@termbit.Cursor::Hide)
+  self.terminal.queue(@termbit.Cursor::MoveTo(0, 0))
   self.highlight()
-  self.draw_rows(buffer)
-  self.draw_status_bar(buffer)
-  self.draw_cursor(buffer)
-  buffer.write_bytes(SHOW_CURSOR)
-  output_bytes(buffer.to_bytes())
+  self.draw_rows()
+  self.draw_status_bar()
+  self.terminal.queue(
+    @termbit.Cursor::MoveTo(
+      (self.cx + 1).to_uint16(),
+      (self.cy - self.roff + 1).to_uint16(),
+    ),
+  )
+  self.terminal.queue(@termbit.Cursor::Show)
+  self.terminal.flush()
 }
 
 ///|
@@ -299,6 +293,7 @@ fn Editor::new() -> Editor {
     roff: 0,
     dirty: false,
     highlight: Map::new(),
+    terminal: @termbit.Executor::new(),
   }
 }
 

@@ -4,7 +4,10 @@
   "deps": {
     "moonbitlang/x": "0.4.23",
     "tonyfettes/tree_sitter": "0.1.15",
-    "tonyfettes/tree_sitter_moonbit": "0.1.8"
+    "tonyfettes/tree_sitter_moonbit": "0.1.8",
+    "Yu-zh/termbit": {
+      "path": "../termbit"
+    }
   },
   "readme": "README.md",
   "repository": "",
