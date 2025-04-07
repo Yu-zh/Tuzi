@@ -4,6 +4,7 @@
     "moonbitlang/x/fs",
     "moonbitlang/x/encoding",
     "Yu-zh/tuzi/cbytes",
+    "Yu-zh/tuzi/theme",
     "Yu-zh/termbit",
     "tonyfettes/tree_sitter",
     "tonyfettes/tree_sitter_moonbit"

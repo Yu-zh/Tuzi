@@ -2,6 +2,9 @@
 const VERSION : Bytes = b"0.0.1"
 
 ///|
+typealias @termbit.(Color, Cursor, Style, Print, Terminal, Executor)
+
+///|
 struct Editor {
   // max number of rows on the screen
   rmax : Int
@@ -21,7 +24,9 @@ struct Editor {
   // highlight
   highlight : Highlight
   // terminal executor
-  terminal : @termbit.Executor
+  terminal : Executor
+  // theme
+  theme : @theme.Theme
 }
 
 ///|
@@ -209,10 +214,10 @@ fn draw_rows(self : Editor) -> Unit {
       for i in 0..<self.rows[r].length() {
         if self.highlight._[r] is Some(t) {
           if t[i] is Some(color) {
-            self.terminal.queue(@termbit.SetForegroundColor(color))
+            self.terminal.queue(Style::SetForegroundColor(color))
           }
         }
-        self.terminal.queue(@termbit.Print::Bytes([self.rows[r][i]]))
+        self.terminal.queue(Print::Bytes([self.rows[r][i]]))
       }
     } else if rows_len == 0 && y == self.rmax / 3 {
       let welcome = [
@@ -222,18 +227,18 @@ fn draw_rows(self : Editor) -> Unit {
         ]
       let padding = (self.cmax - welcome.length()) / 2
       let padding = Bytes::make(padding, b' ')
-      self.terminal.queue(@termbit.Print::Bytes([b'~', ..padding, ..welcome]))
+      self.terminal.queue(Print::Bytes([b'~', ..padding, ..welcome]))
     } else {
-      self.terminal.queue(@termbit.Print::Bytes([b'~']))
+      self.terminal.queue(Print::Bytes([b'~']))
     }
-    self.terminal.queue(@termbit.Terminal::Clear(UntilNewLine))
-    self.terminal.queue(@termbit.Print::Bytes(b"\r\n"))
+    self.terminal.queue(Terminal::Clear(UntilNewLine))
+    self.terminal.queue(Print::Bytes(b"\r\n"))
   }
 }
 
 ///|
 fn draw_status_bar(self : Editor) -> Unit {
-  self.terminal.queue(@termbit.SetAttribute(Reverse))
+  self.terminal.queue(Style::SetAttribute(Reverse))
   let file_status = if self.filename.length() > 0 {
     self.filename
   } else {
@@ -254,26 +259,33 @@ fn draw_status_bar(self : Editor) -> Unit {
     b' ',
   )
   let status : Bytes = [..status_front, ..padding, ..status_end, ..b"\r\n"]
-  self.terminal.queue(@termbit.Print::Bytes(status))
-  self.terminal.queue(@termbit.SetAttribute(Reset))
+  self.terminal.queue(Print::Bytes(status))
+  self.terminal.queue(Style::SetAttribute(Reset))
 }
 
 ///|
 fn refresh_screen(self : Editor) -> Unit {
-  self.terminal.queue(@termbit.Hide)
+  self.terminal.queue(Cursor::Hide)
   // reset cursor to the top left
-  self.terminal.queue(@termbit.Cursor::Hide)
-  self.terminal.queue(@termbit.Cursor::MoveTo(0, 0))
+  self.terminal.queue(Cursor::Hide)
+  self.terminal.queue(Cursor::MoveTo(0, 0))
+  match self.theme._["ui.background"] {
+    Some(Style(fg=Some(fg), bg=Some(bg), ..)) => {
+      self.terminal.queue(Style::SetForegroundColor(fg))
+      self.terminal.queue(Style::SetBackgroundColor(bg))
+    }
+    _ => ()
+  }
   self.highlight()
   self.draw_rows()
   self.draw_status_bar()
   self.terminal.queue(
-    @termbit.Cursor::MoveTo(
+    Cursor::MoveTo(
       (self.cx + 1).to_uint16(),
       (self.cy - self.roff + 1).to_uint16(),
     ),
   )
-  self.terminal.queue(@termbit.Cursor::Show)
+  self.terminal.queue(Cursor::Show)
   self.terminal.flush()
 }
 
@@ -293,7 +305,8 @@ fn Editor::new() -> Editor {
     roff: 0,
     dirty: false,
     highlight: Map::new(),
-    terminal: @termbit.Executor::new(),
+    terminal: Executor::new(),
+    theme: @theme.catppuccin_latte,
   }
 }
 
